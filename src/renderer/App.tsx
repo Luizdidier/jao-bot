@@ -1,40 +1,22 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import icon from '../../assets/icon.svg';
 import './App.css';
+import { useEffect } from 'react';
+import { ipcRenderer } from 'electron';
 
-function Hello() {
+function Hello({ qr }: any) {
+  useEffect(() => {
+    window.electron.ipcRenderer.on('qr', (qrCodeDataURL) => {
+      // Mostre qrCodeDataURL como uma imagem no React
+      const img = document.getElementById('qrCode') as HTMLImageElement;
+      img.src = qrCodeDataURL as string;
+    });
+  }, []);
+
   return (
     <div>
-      <div className="Hello">
-        <img width="200" alt="icon" src={icon} />
-      </div>
-      <h1>electron-react-boilerplate</h1>
-      <div className="Hello">
-        <a
-          href="https://electron-react-boilerplate.js.org/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              📚
-            </span>
-            Read our docs
-          </button>
-        </a>
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="folded hands">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
-      </div>
+      <h1>Scan QR Code</h1>
+      <img id="qrCode" alt="QR Code" />
     </div>
   );
 }

@@ -14,6 +14,12 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import {
+  Client as WhatsAppClient,
+  LocalAuth,
+  MessageMedia,
+} from 'whatsapp-web.js';
+import qrcode from 'qrcode';
 
 class AppUpdater {
   constructor() {
@@ -106,6 +112,64 @@ const createWindow = async () => {
     shell.openExternal(edata.url);
     return { action: 'deny' };
   });
+
+  const client = new WhatsAppClient({});
+
+  client.on('qr', async (qr) => {
+    console.log('QR RECEIVED', qr);
+    const qrCodeDataURL = await qrcode.toDataURL(qr);
+    console.log('QR PASS', qr);
+    mainWindow?.webContents.send('qr', qrCodeDataURL);
+  });
+
+  client.on('authenticated', (session) => {
+    console.log('Authenticated', session);
+  });
+
+  client.on('auth_failure', (msg) => {
+    console.error('Authentication failure', msg);
+  });
+
+  client.on('ready', async () => {
+    console.log('Client is ready');
+    const chats = await client.getChats();
+
+    const jaoGroup = chats.find(
+      (chat) => chat.name === 'Jão BOT' && chat.isGroup,
+    ) || { id: { _serialized: '' } };
+
+    // Enviar mensagem de texto
+    if (jaoGroup?.id._serialized !== '') {
+      client
+        .sendMessage(jaoGroup?.id._serialized, 'U.u Jão BOT U.u')
+        .then((response) => {
+          console.log('Mensagem enviada:', response.id.toString());
+        })
+        .catch((err) => {
+          console.error('Erro ao enviar mensagem:', err);
+        });
+
+      // Enviar PDF
+      // const pdfPath = './files/example.pdf'; // Substitua pelo caminho do seu arquivo PDF
+      // const media = new MessageMedia(
+      //   'application/pdf',
+      //   fs.readFileSync(pdfPath).toString('base64'),
+      //   'example.pdf',
+      // );
+
+      // client
+      //   .sendMessage(jaoGroup.id._serialized, media)
+      //   .then((response) => {
+      //     console.log('PDF enviado:', response.id.toString());
+      //   })
+      //   .catch((err) => {
+      //     console.error('Erro ao enviar PDF:', err);
+      //   });
+    }
+    // }
+  });
+
+  client.initialize();
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
