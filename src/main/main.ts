@@ -20,6 +20,49 @@ import {
   MessageMedia,
 } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
+import XLSX from 'xlsx';
+import fs from 'fs';
+import { whatsAppCall } from './app/whatsappClient/whastappClient';
+
+interface OriginalObject {
+  [key: string]: string | number;
+}
+
+interface TransformedObject {
+  [key: string]: string | number;
+}
+
+const transformExcel = (list: OriginalObject[]): TransformedObject[] => {
+  // Pegar o primeiro objeto da lista para usar como referência para as chaves
+  const firstObject = list[0];
+
+  // Criar um array para armazenar os novos objetos transformados
+  const transformedList: TransformedObject[] = [];
+
+  // Loop pelos objetos da lista, começando do índice 1
+  for (let i = 1; i < list.length; i++) {
+    const obj = list[i];
+    const transformedObj: TransformedObject = {};
+
+    // Loop pelas chaves do objeto original
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(firstObject, key)) {
+        // Pegar a correspondente "chave humana" do primeiro objeto
+        const newKey = firstObject[key];
+
+        // Adicionar o valor ao novo objeto com a "chave humana"
+        if (typeof newKey === 'string' || typeof newKey === 'number') {
+          transformedObj[newKey] = obj[key];
+        }
+      }
+    }
+
+    // Adicionar o novo objeto transformado à lista transformada
+    transformedList.push(transformedObj);
+  }
+
+  return transformedList;
+};
 
 class AppUpdater {
   constructor() {
@@ -30,6 +73,14 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+
+const rawData = fs.readFileSync('config.json', 'utf8');
+const data = JSON.parse(rawData);
+const filePath = data.filePath
+
+ipcMain.on('save-filePath', (event, filePath) => {
+  fs.writeFileSync('config.json', JSON.stringify({ filePath }));
+});
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -77,13 +128,14 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
+    width: 1280,
+    height: 720,
     icon: getAssetPath('icon.png'),
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
+      nodeIntegration: true,
     },
   });
 
@@ -113,63 +165,17 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
-  const client = new WhatsAppClient({});
+  // Substitua pelo caminho real
+  const workbook = XLSX.readFile(filePath);
+  const sheetNames = workbook.SheetNames;
+  const sheet = workbook.Sheets[sheetNames[0]];
+  const data = transformExcel(XLSX.utils.sheet_to_json(sheet));
 
-  client.on('qr', async (qr) => {
-    console.log('QR RECEIVED', qr);
-    const qrCodeDataURL = await qrcode.toDataURL(qr);
-    console.log('QR PASS', qr);
-    mainWindow?.webContents.send('qr', qrCodeDataURL);
+  // Envie os dados para o renderer process
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.send('file-data', data);
+    whatsAppCall(mainWindow as BrowserWindow, data);
   });
-
-  client.on('authenticated', (session) => {
-    console.log('Authenticated', session);
-  });
-
-  client.on('auth_failure', (msg) => {
-    console.error('Authentication failure', msg);
-  });
-
-  client.on('ready', async () => {
-    console.log('Client is ready');
-    const chats = await client.getChats();
-
-    const jaoGroup = chats.find(
-      (chat) => chat.name === 'Jão BOT' && chat.isGroup,
-    ) || { id: { _serialized: '' } };
-
-    // Enviar mensagem de texto
-    if (jaoGroup?.id._serialized !== '') {
-      client
-        .sendMessage(jaoGroup?.id._serialized, 'U.u Jão BOT U.u')
-        .then((response) => {
-          console.log('Mensagem enviada:', response.id.toString());
-        })
-        .catch((err) => {
-          console.error('Erro ao enviar mensagem:', err);
-        });
-
-      // Enviar PDF
-      // const pdfPath = './files/example.pdf'; // Substitua pelo caminho do seu arquivo PDF
-      // const media = new MessageMedia(
-      //   'application/pdf',
-      //   fs.readFileSync(pdfPath).toString('base64'),
-      //   'example.pdf',
-      // );
-
-      // client
-      //   .sendMessage(jaoGroup.id._serialized, media)
-      //   .then((response) => {
-      //     console.log('PDF enviado:', response.id.toString());
-      //   })
-      //   .catch((err) => {
-      //     console.error('Erro ao enviar PDF:', err);
-      //   });
-    }
-    // }
-  });
-
-  client.initialize();
 
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
