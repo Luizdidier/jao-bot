@@ -76,10 +76,20 @@ let mainWindow: BrowserWindow | null = null;
 
 const rawData = fs.readFileSync('config.json', 'utf8');
 const data = JSON.parse(rawData);
-const filePath = data.filePath
+const filePath = data.filePath;
 
 ipcMain.on('save-filePath', (event, filePath) => {
   fs.writeFileSync('config.json', JSON.stringify({ filePath }));
+});
+
+ipcMain.on('load-excel-file', (event, filePath) => {
+  const workbook = XLSX.readFile(filePath);
+  const sheetNames = workbook.SheetNames;
+  const sheet = workbook.Sheets[sheetNames[0]];
+  const data = transformExcel(XLSX.utils.sheet_to_json(sheet));
+
+  event.sender.send('file-data', data);
+  whatsAppCall((event.sender as any).getOwnerBrowserWindow(), data);
 });
 
 ipcMain.on('ipc-example', async (event, arg) => {

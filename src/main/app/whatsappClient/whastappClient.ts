@@ -13,11 +13,11 @@ interface TransformedObject {
 
 function getFileName(path: string) {
   // Dividir o caminho pelo separador de diretórios
-  const parts = path.split("\\");
-  
+  const parts = path.split('\\');
+
   // Pegar a última parte, que deve ser o nome do arquivo
   const fileName = parts[parts.length - 1];
-  
+
   return fileName;
 }
 
@@ -41,43 +41,53 @@ export const whatsAppCall = (
   });
 
   client.on('ready', async () => {
-    console.log('Client is ready');
-    const chats = await client.getChats();
-    payload.forEach((el) => {
-      const jaoGroup = chats.find(
-        (chat) => chat.name === el.Contato && chat.isGroup,
-      ) || { id: { _serialized: '' } };
+    try {
+      console.log('Client is ready');
 
-      // Enviar mensagem de texto
-      if (jaoGroup?.id._serialized !== '') {
-        client
-          .sendMessage(jaoGroup?.id._serialized, el.Mensagem as string)
-          .then((response) => {
-            console.log('Mensagem enviada:', response.id.toString());
-          })
-          .catch((err) => {
-            console.error('Erro ao enviar mensagem:', err);
-          });
+      console.time('Get Chats');
+      const chats = await client.getChats();
+      console.timeEnd('Get Chats');
 
-        // Enviar PDF
-        const pdfPath: any = el.Arquivo; // Substitua pelo caminho do seu arquivo PDF
+      payload.forEach((el) => {
+        const jaoGroup = chats.find(
+          (chat) => chat.name === el.Contato && chat.isGroup,
+        ) || { id: { _serialized: '' } };
 
-        const media = new MessageMedia(
-          'application/pdf',
-          fs.readFileSync(pdfPath).toString('base64'),
-          getFileName(pdfPath)
-        );
+        // Enviar mensagem de texto
+        if (jaoGroup?.id._serialized !== '') {
+          // client
+          //   .sendMessage(jaoGroup?.id._serialized, el.Mensagem as string)
+          //   .then((response) => {
+          //     console.log('Mensagem enviada:', response.id.toString());
+          //   })
+          //   .catch((err) => {
+          //     console.error('Erro ao enviar mensagem:', err);
+          //   });
 
-        client
-          .sendMessage(jaoGroup.id._serialized, media)
-          .then((response) => {
-            console.log('PDF enviado:', response.id.toString());
-          })
-          .catch((err) => {
-            console.error('Erro ao enviar PDF:', err);
-          });
-      }
-    });
+          // Enviar PDF
+          const pdfPath: any = el.Arquivo; // Substitua pelo caminho do seu arquivo PDF
+
+          const media = new MessageMedia(
+            'application/pdf',
+            fs.readFileSync(pdfPath).toString('base64'),
+            getFileName(pdfPath),
+          );
+
+          client
+            .sendMessage(jaoGroup.id._serialized, media, {
+              caption: el.Mensagem as string,
+            })
+            .then((response) => {
+              console.log('PDF enviado:', response.id.toString());
+            })
+            .catch((err) => {
+              console.error('Erro ao enviar PDF:', err);
+            });
+        }
+      });
+    } catch (err) {
+      console.log(err);
+    }
     // }
   });
 

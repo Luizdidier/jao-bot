@@ -19,21 +19,28 @@ function Home({ qr }: any) {
     };
 
     const handleQrData = (qrCodeDataURL: any) => {
-      setIsLoading(false);
-      const img = document.getElementById('qrCode') as HTMLImageElement;
-      if (qrCodeDataURL) {
-        img.style.display = 'block';
-        img.src = qrCodeDataURL as string;
-      } else {
-        img.style.display = 'none';
+      try {
+        setIsLoading(false);
+        console.log('Chamou 1');
+        const img = document.getElementById('qrCode') as HTMLImageElement;
+        if (qrCodeDataURL) {
+          console.log('Chamou 2 : ', qrCodeDataURL);
+          img.style.display = 'block';
+          img.src = qrCodeDataURL as string;
+        } else {
+          img.style.display = 'none';
+        }
+      } catch (err) {
+        console.log(err);
       }
     };
 
     if (filePathCache) {
       window.electron.ipcRenderer.on('file-data', handleFileData);
+      window.electron.ipcRenderer.sendMessage('load-excel-file', filePathCache);
       window.electron.ipcRenderer.on('qr', handleQrData);
     } else {
-      navigate('/');
+      navigate('/config');
     }
   }, []);
 
