@@ -32,13 +32,15 @@ const theme = createTheme({
 });
 
 const Configuration: React.FC = () => {
-  const [filePath, setFilePath] = useState('');
+  const [filePath, setFilePath] = useState(
+    localStorage.getItem('filePath') || '',
+  );
   const navigate = useNavigate();
 
   const handleSave = () => {
     window.electron.ipcRenderer.sendMessage('save-filePath', filePath);
-    localStorage.setItem('filePath', filePath)
-    navigate('/');
+    localStorage.setItem('filePath', filePath);
+    navigate('/home');
   };
 
   return (

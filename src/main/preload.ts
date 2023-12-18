@@ -8,7 +8,9 @@ export type Channels =
   | 'file-data'
   | 'call-main-function'
   | 'save-filePath'
-  | 'request-filePath';
+  | 'request-filePath'
+  | 'loadingSend'
+  | 'load-excel-file';
 // window.require = require;
 // (window as any).fs = require('fs');
 

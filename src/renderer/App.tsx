@@ -1,7 +1,5 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import icon from '../../assets/icon.svg';
 import './App.css';
-import { useEffect } from 'react';
 import jaoIcon from './assets/jao.png';
 import { Grid } from '@mui/material';
 import Home from './app/Home';
@@ -15,9 +13,9 @@ export default function App() {
       </Grid>
       <Router>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Configuration />} />
 
-          <Route path="/config" element={<Configuration />} />
+          <Route path="/home" element={<Home />} />
         </Routes>
       </Router>
     </>

@@ -21,6 +21,10 @@ function getFileName(path: string) {
   return fileName;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export const whatsAppCall = (
   mainWindow: BrowserWindow,
   payload: TransformedObject[],
@@ -43,27 +47,20 @@ export const whatsAppCall = (
   client.on('ready', async () => {
     try {
       console.log('Client is ready');
-
+      mainWindow?.webContents.send('loadingSend', 'INIT_SEND');
       console.time('Get Chats');
       const chats = await client.getChats();
       console.timeEnd('Get Chats');
 
-      payload.forEach((el) => {
+      for (const el of payload) {
         const jaoGroup = chats.find(
-          (chat) => chat.name === el.Contato && chat.isGroup,
+          (chat) =>
+            chat?.name?.toUpperCase() === String(el?.Contato)?.toUpperCase() &&
+            chat.isGroup,
         ) || { id: { _serialized: '' } };
 
         // Enviar mensagem de texto
         if (jaoGroup?.id._serialized !== '') {
-          // client
-          //   .sendMessage(jaoGroup?.id._serialized, el.Mensagem as string)
-          //   .then((response) => {
-          //     console.log('Mensagem enviada:', response.id.toString());
-          //   })
-          //   .catch((err) => {
-          //     console.error('Erro ao enviar mensagem:', err);
-          //   });
-
           // Enviar PDF
           const pdfPath: any = el.Arquivo; // Substitua pelo caminho do seu arquivo PDF
 
@@ -73,22 +70,20 @@ export const whatsAppCall = (
             getFileName(pdfPath),
           );
 
-          client
-            .sendMessage(jaoGroup.id._serialized, media, {
-              caption: el.Mensagem as string,
-            })
-            .then((response) => {
-              console.log('PDF enviado:', response.id.toString());
-            })
-            .catch((err) => {
-              console.error('Erro ao enviar PDF:', err);
-            });
+          await client.sendMessage(jaoGroup.id._serialized, media, {
+            caption: el.Mensagem as string,
+          });
+
+          await sleep(10000); // Espera por 10 segundos
+        } else {
+          console.log(el?.Contato, ' : Não Enviou');
         }
-      });
+      }
+
+      mainWindow?.webContents.send('loadingSend', 'END_SEND');
     } catch (err) {
       console.log(err);
     }
-    // }
   });
 
   client.initialize();

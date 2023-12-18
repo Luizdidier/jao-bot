@@ -184,7 +184,11 @@ const createWindow = async () => {
   // Envie os dados para o renderer process
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.webContents.send('file-data', data);
-    whatsAppCall(mainWindow as BrowserWindow, data);
+
+    mainWindow?.webContents.send(
+      'call-zap',
+      whatsAppCall(mainWindow as BrowserWindow, data),
+    );
   });
 
   // Remove this if your app does not use auto updates
